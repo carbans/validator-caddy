@@ -1,14 +1,17 @@
 package validator
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
 
-// ValidatorMiddleware estructura del módulo
-type ValidatorMiddleware struct{}
+// ValidatorMiddleware representa el middleware de validación
+type ValidatorMiddleware struct {
+	Config *Config `json:"config,omitempty"`
+}
 
 // CaddyModule registra el módulo en Caddy
 func (ValidatorMiddleware) CaddyModule() caddy.ModuleInfo {
@@ -18,31 +21,18 @@ func (ValidatorMiddleware) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// ServeHTTP procesa la petición y la envía al servicio de validación
-func (m ValidatorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	validationURL := "http://validator-service:9000/check"
-
-	req, err := http.NewRequest("POST", validationURL, r.Body)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Si la validación falla, bloquea la solicitud
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Blocked by validation service", http.StatusForbidden)
+// ServeHTTP procesa las solicitudes HTTP
+func (m *ValidatorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	// Verifica que la URL del validador esté configurada
+	if m.Config == nil || m.Config.ValidatorURL == "" {
+		http.Error(w, "Validator service not configured", http.StatusInternalServerError)
 		return nil
 	}
 
-	// Si la validación es correcta, sigue con la cadena de middleware
+	// Aquí podrías agregar lógica para validar la petición antes de enviarla al backend
+	fmt.Printf("Procesando petición con Validator en: %s\n", m.Config.ValidatorURL)
+
+	// Llama al siguiente middleware en la cadena
 	return next.ServeHTTP(w, r)
 }
 

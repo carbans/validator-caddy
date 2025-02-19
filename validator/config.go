@@ -1,18 +1,32 @@
 package validator
 
-import "github.com/caddyserver/caddy/caddyfile"
+import (
+	"fmt"
 
-// Config estructura de configuración del middleware
+	"github.com/caddyserver/caddy/v2"
+)
+
+// Config representa la configuración del middleware
 type Config struct {
 	ValidatorURL string `json:"validator_url,omitempty"`
 }
 
-// UnmarshalCaddyfile permite leer configuración desde el Caddyfile
-func (m *ValidatorMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	for d.Next() {
-		if d.Val() == "validator_url" && d.NextArg() {
-			m.ValidatorURL = d.Val()
-		}
+// DefaultConfig define los valores predeterminados
+var DefaultConfig = Config{
+	ValidatorURL: "http://default-validator.local",
+}
+
+// Provision inicializa la configuración del middleware
+func (m *ValidatorMiddleware) Provision(ctx caddy.Context) error {
+	if m.Config == nil {
+		m.Config = &DefaultConfig
 	}
+
+	// Verifica si el ValidatorURL está vacío y usa el valor por defecto
+	if m.Config.ValidatorURL == "" {
+		m.Config.ValidatorURL = DefaultConfig.ValidatorURL
+	}
+
+	fmt.Printf("ValidatorMiddleware configurado con URL: %s\n", m.Config.ValidatorURL)
 	return nil
 }
